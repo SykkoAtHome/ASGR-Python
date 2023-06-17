@@ -26,7 +26,7 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 
-class UserVerification(BaseModel):
+class UpdateUserPassword(BaseModel):
     password: str
     new_password: str
 
@@ -35,6 +35,18 @@ class UserVerification(BaseModel):
             'example': {
                 'password': 'old_password',
                 'new_password': 'new_password'
+            }
+        }
+
+class UpdateUser(BaseModel):
+    new_firstname: str
+    new_lastname: str
+
+    class Config:
+        schema_extra = {
+            'example': {
+                'new_firstname': 'NewFirstName',
+                'new_lastname': 'NewLastName'
             }
         }
 
@@ -47,7 +59,7 @@ async def get_user(user: user_dependency, db: db_dependency):
 
 
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(user: user_dependency, db: db_dependency, user_verification: UserVerification):
+async def change_password(user: user_dependency, db: db_dependency, user_verification: UpdateUserPassword):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication failed')
     user_model = db.query(Users).filter(Users.id == user.get('id')).first()
@@ -57,3 +69,13 @@ async def change_password(user: user_dependency, db: db_dependency, user_verific
     user_model.hashed_password = bcrypt_context.hash(user_verification.new_password)
     db.add(user_model)
     db.commit()
+
+@router.put("/update", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user(user: user_dependency, db: db_dependency, update_user: UpdateUser):
+    if user is None:
+        raise HTTPException(status_code=401, detail='Authentication failed')
+    user_model = db.query(Users).filter(Users.id == user.get('id')).first()
+    user_model.first_name = update_user.new_firstname
+    user_model.last_name = update_user.new_lastname
+    db.commit()
+
