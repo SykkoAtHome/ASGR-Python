@@ -14,7 +14,7 @@ from models import Users
 
 router = APIRouter(prefix='/auth', tags=['Authentication'])
 
-SECRET_KEY = '4565hjghj675jgfghjfhgdjhgfhj43655y54h4yh@#@$$%^%$&%fdgd7yhg8rh2938ryfr'
+SECRET_KEY = '762f03016f368cb24d532e5447a05a9937b26b7924c00cb13e58f37fe7da1c3c'
 ALGORITHM = 'HS256'
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
