@@ -16,9 +16,10 @@ router = APIRouter(prefix='/auth', tags=['Authentication'])
 
 SECRET_KEY = '762f03016f368cb24d532e5447a05a9937b26b7924c00cb13e58f37fe7da1c3c'
 ALGORITHM = 'HS256'
+TOKEN_EXPIRE = 15
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token') # use token for endpoint
 
 
 class CreateUserRequest(BaseModel):
@@ -65,8 +66,8 @@ def authenticate_user(username: str, password: str, db):  # lesson 104
     return user
 
 
-def create_access_token(username: str, user_id: int, expires_delta: timedelta):
-    encode = {'sub': username, 'id': user_id, }
+def create_access_token(username: str, user_id: int, user_type: int, expires_delta: timedelta):
+    encode = {'sub': username, 'id': user_id, 'type': user_type}
     expires = datetime.utcnow() + expires_delta
     encode.update({'exp': expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -77,9 +78,10 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get('sub')
         user_id: int = payload.get('id')
+        user_type: int = payload.get('type')
         if username is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
-        return {'username': username, 'id': user_id}
+        return {'username': username, 'id': user_id, 'type': user_type}
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
 
@@ -92,6 +94,7 @@ async def create_user(db: db_dependency,
                               first_name=create_user_request.first_name,
                               last_name=create_user_request.last_name,
                               hashed_password=bcrypt_context.hash(create_user_request.password),
+                              user_type=3,
                               is_active=True
                               )
     db.add(create_user_model)
@@ -104,6 +107,6 @@ async def login_for_access_token(form_date: Annotated[OAuth2PasswordRequestForm,
     user = authenticate_user(form_date.username, form_date.password, db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user.')
-    token = create_access_token(user.username, user.id, timedelta(minutes=20))
+    token = create_access_token(user.username, user.id, user.user_type, timedelta(minutes=TOKEN_EXPIRE))
 
     return {'access_token': token, 'token_type': 'bearer'}

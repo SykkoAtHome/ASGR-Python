@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from database import Base
 
 
@@ -10,8 +10,14 @@ class Users(Base):
     first_name = Column(String)
     last_name = Column(String)
     hashed_password = Column(String)
+    user_type = Column(Integer, ForeignKey("user_type.id"), default=3)
     is_active = Column(Boolean, default=True)
 
+
+class UserType(Base):
+    __tablename__ = 'user_type'
+    id = Column(Integer, primary_key=True, index=True)
+    user_type = Column(String)
 
 # class Game(Base):
 #     __tablename__ = 'games'
