@@ -35,7 +35,7 @@ class CreateUserRequest(BaseModel):
                 'email': 'user@email.com',
                 'first_name': 'firstname',
                 'last_name': 'lastname',
-                'password': 'password'
+                'password': 'p4ssw0rd'
             }
         }
 
