@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP, FetchedValue
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, TIMESTAMP
+import datetime
 from database import Base
 
 
@@ -11,7 +12,8 @@ class Users(Base):
     last_name = Column(String)
     hashed_password = Column(String)
     user_type = Column(Integer, ForeignKey("user_type.id"), default=3)
-    create_date = Column(TIMESTAMP)
+    create_date = Column(TIMESTAMP, default=datetime.datetime.utcnow)
+    email_confirmed = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
 
