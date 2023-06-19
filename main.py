@@ -3,6 +3,7 @@ import models
 from database import engine
 from routers import users, auth, superuser, game
 
+
 app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)

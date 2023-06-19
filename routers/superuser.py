@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from starlette import status
 from database import SessionLocal
 from .auth import get_current_user, CreateUserRequest
-from models import Users
+from models import Users, Game
 from passlib.context import CryptContext
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -31,7 +31,7 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 @router.get("/user", status_code=status.HTTP_200_OK)
 async def read_all_users(user: user_dependency, db: db_dependency):
     if user is None:
-        raise HTTPException(status_code=401, detail='Not authenticated')
+        raise HTTPException(status_code=401, detail='Unauthorized')
     if user.get('type') != 1:
         raise HTTPException(status_code=403, detail='Forbidden')
     return db.query(Users).all()
@@ -40,7 +40,7 @@ async def read_all_users(user: user_dependency, db: db_dependency):
 @router.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user: user_dependency, db: db_dependency, user_id: int = Path(gt=0)):
     if user is None:
-        raise HTTPException(status_code=401, detail='Not authenticated')
+        raise HTTPException(status_code=401, detail='Unauthorized')
     if user.get('type') != 1:
         raise HTTPException(status_code=403, detail='Forbidden')
     user_model = db.query(Users).filter(Users.id == user_id).first()
@@ -54,7 +54,7 @@ async def delete_user(user: user_dependency, db: db_dependency, user_id: int = P
 async def create_superuser(user: user_dependency, db: db_dependency,
                            create_user_request: CreateUserRequest):
     if user is None:
-        raise HTTPException(status_code=401, detail='Not authenticated')
+        raise HTTPException(status_code=401, detail='Unauthorized')
     if user.get('type') != 1:
         raise HTTPException(status_code=403, detail='Forbidden')
 
@@ -68,3 +68,16 @@ async def create_superuser(user: user_dependency, db: db_dependency,
                               )
     db.add(create_user_model)
     db.commit()
+
+
+@router.get("/game/{game_id}", status_code=status.HTTP_200_OK)
+async def get_game(user: user_dependency, db: db_dependency, game_id: int = Path(gt=0)):
+    if user is None:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    if user.get('type') != 1:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    game_model = db.query(Game).filter(Game.id == game_id).first()
+    if game_model is None:
+        raise HTTPException(status_code=404, detail='Game not found.')
+    print(game_model)
+    return game_model
