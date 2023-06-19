@@ -16,10 +16,10 @@ router = APIRouter(prefix='/auth', tags=['Authentication'])
 
 SECRET_KEY = '762f03016f368cb24d532e5447a05a9937b26b7924c00cb13e58f37fe7da1c3c'
 ALGORITHM = 'HS256'
-TOKEN_EXPIRE = 15
+TOKEN_EXPIRE = 30
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')  # use token for endpoint
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
 class CreateUserRequest(BaseModel):

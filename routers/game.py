@@ -24,6 +24,7 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
+game_dependency = Annotated[dict, Depends(get_current_user)]
 
 
 class CreateGameRequest(BaseModel):

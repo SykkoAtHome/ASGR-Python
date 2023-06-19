@@ -50,7 +50,7 @@ async def delete_user(user: user_dependency, db: db_dependency, user_id: int = P
     db.commit()
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/user", status_code=status.HTTP_201_CREATED)
 async def create_superuser(user: user_dependency, db: db_dependency,
                            create_user_request: CreateUserRequest):
     if user is None:
@@ -70,8 +70,8 @@ async def create_superuser(user: user_dependency, db: db_dependency,
     db.commit()
 
 
-@router.get("/game/{game_id}", status_code=status.HTTP_200_OK)
-async def get_game(user: user_dependency, db: db_dependency, game_id: int = Path(gt=0)):
+@router.get("/{game_id}", status_code=status.HTTP_200_OK)
+async def read_game(user: user_dependency, db: db_dependency, game_id: int = Path(gt=0)):
     if user is None:
         raise HTTPException(status_code=401, detail='Unauthorized')
     if user.get('type') != 1:
