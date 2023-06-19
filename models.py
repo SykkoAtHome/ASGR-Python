@@ -64,7 +64,7 @@ class GameEvents(Base):
 
     __tablename__ = 'game_events'
     id = Column(Integer, primary_key=True, index=True)
-    game_id = Column(String, ForeignKey('games.id'))
+    game_id = Column(Integer, ForeignKey('games.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
     event_type = Column(Integer, ForeignKey("events.id"))
     event_details = Column(String)
