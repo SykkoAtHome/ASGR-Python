@@ -1,17 +1,26 @@
 from typing import Annotated
-from datetime import timedelta, datetime
+from datetime import timedelta
+
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
 from pydantic.networks import EmailStr
 from jose import jwt, JWTError
+from requests.exceptions import SSLError, JSONDecodeError
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
+from datetime import datetime
+import random
+import string
+
+from urllib3.exceptions import MaxRetryError
 
 from database import SessionLocal
-from models import Users, EventLogger, UserNotifications
+from models import Users, EventLogger, UserNotifications, EmailConfirm
 
 router = APIRouter(prefix='/account', tags=['Authentication'])
 
@@ -35,36 +44,53 @@ def get_db():
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 db_dependency = Annotated[Session, Depends(get_db)]
+
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl='account/login')
 
 
 class CreateUserRequest(BaseModel):
-    username: str = Field(max_length=20)
     email: EmailStr
     password: str = Field(min_length=3)
 
     class Config:
         schema_extra = {
             'example': {
-                'username': 'username',
                 'email': 'user@email.com',
                 'password': 'p4ssw0rd'
             }
         }
 
 
-def authenticate_user(username: str, password: str, db):
-    user = db.query(Users).filter(Users.username == username).first()
+class UpdateUserPassword(BaseModel):
+    password: str
+    new_password: str = Field(min_length=6)
+
+    class Config:
+        schema_extra = {
+            'example': {
+                'password': 'current_password',
+                'new_password': 'new_password'
+            }
+        }
+
+
+def authenticate_user(email: str, password: str, db):
+    user = db.query(Users).filter(Users.email == email).first()
     if not user:
         return False
     if not bcrypt_context.verify(password, user.hashed_password):
+        event_log = EventLogger(event_type=5,
+                                user_id=user.id,
+                                event_body=f"Login failed. Account: {user.email}, user_id: {user.id}. Wrong password.")
+        db.add(event_log)
+        db.commit()
         return False
     return user
 
 
 def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     encode = {'sub': username, 'id': user_id}
-    expires = datetime.utcnow() + expires_delta
+    expires = datetime.now() + expires_delta
     encode.update({'exp': expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -72,71 +98,151 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
 async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get('sub')
+        email: str = payload.get('sub')
         user_id: int = payload.get('id')
-
-        if username is None or user_id is None:
+        if email is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Unauthorized')
-        return {'username': username, 'id': user_id}
+        return {'email': email, 'id': user_id}
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Unauthorized')
+
+
+user_dependency = Annotated[dict, Depends(get_current_user)]
+
+
+def check_user_logs(db, user_id, event_type, time_delta):
+    start_time = datetime.now() - timedelta(minutes=time_delta)
+    query = db.query(func.count()). \
+        filter(EventLogger.user_id == user_id). \
+        filter(EventLogger.event_type == event_type). \
+        filter(EventLogger.event_date >= start_time).scalar()
+    return query
+
+
+def email_activation(db: db_dependency, user_id, date_time):
+    unique = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
+    query = EmailConfirm(user_id=user_id,
+                         unique=unique,
+                         create_date=date_time,
+                         expire_date=date_time + timedelta(hours=2))
+
+    db.add(query)
+    db.commit()
+
+
+def get_user_ip():
+    response = requests.get('https://api.ipify.org?format=json').json()
+    return response["ip"]
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(db: db_dependency, create_user_request: CreateUserRequest):
     try:
-        existing_user = db.query(Users).filter(Users.username == create_user_request.username).first()
         existing_email = db.query(Users).filter(Users.email == create_user_request.email).first()
 
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Username already in use.")
         if existing_email:
             raise HTTPException(status_code=400, detail="E-mail already in use.")
 
+        date_time = datetime.now()
         create_user_model = Users(email=create_user_request.email,
-                                  username=create_user_request.username,
                                   hashed_password=bcrypt_context.hash(create_user_request.password),
+                                  create_date=date_time
                                   )
         db.add(create_user_model)
         db.flush()
-        new_user_id = db.query(Users.id).filter(Users.username == create_user_request.username).first()
+        new_user_id = create_user_model.id
+        email_activation(db, create_user_model.id, date_time)
         event_log = EventLogger(event_type=1,
-                                user_id=new_user_id[0],
-                                event_body=f"New account created. Username: {create_user_request.username}, "
-                                           f"user_id: {new_user_id[0]}"
+                                user_id=new_user_id,
+                                event_body=f"New account created. Account: {create_user_request.email}, "
+                                           f"user_id: {new_user_id}",
+                                event_date=date_time,
+                                client_host=get_user_ip()
                                 )
         db.add(event_log)
-        db.flush()
-        notification_log = UserNotifications(user_id=new_user_id[0],
+
+        notification_log = UserNotifications(user_id=new_user_id,
                                              is_visible=True,
                                              is_new=True,
                                              category=1,
-                                             notification_body=f"Congratulations! Your account has been created."
+                                             notification_body=f"Congratulations! Your account has been created.",
+                                             notification_date=date_time
                                              )
         db.add(notification_log)
         db.flush()
+
         return {"message": "Account created"}
 
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail="Database Error")
-
+    except JSONDecodeError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error processing data")
+    except (SSLError, MaxRetryError):
+        db.rollback()
+        raise HTTPException(status_code=500, detail="ipify.org offline")
     finally:
         db.commit()
         db.close()
 
 
-@router.post("/login", response_model=Token)  # lesson 104
-async def login_for_access_token(form: Annotated[OAuth2PasswordRequestForm, Depends()],
-                                 db: db_dependency):
+@router.post("/login", response_model=Token)
+async def login_for_access_token(form: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
     user = authenticate_user(form.username, form.password, db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Unauthorized')
-    token = create_access_token(user.username, user.id, timedelta(minutes=TOKEN_EXPIRE))
+    account_status = db.query(Users.is_active).filter(Users.email == form.username).scalar()
+    if account_status == 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Account disabled')
+    token = create_access_token(user.email, user.id, timedelta(minutes=TOKEN_EXPIRE))
     event_log = EventLogger(event_type=4,
                             user_id=user.id,
-                            event_body=f"Login successful. Username: {user.username}, user_id: {user.id}"
-                            )
+                            event_body=f"Login successful. Account: {user.email}, user_id: {user.id}",
+                            client_host=get_user_ip())
     db.add(event_log)
     db.commit()
     return {'access_token': token, 'token_type': 'bearer'}
+
+
+@router.post("/confirm_email/{unique}")
+async def confirm_user_email(db: db_dependency, unique):
+    email_unique = db.query(EmailConfirm).filter(EmailConfirm.unique == unique).order_by(EmailConfirm.id.desc()).first()
+    if not email_unique or email_unique.expire_date < datetime.now():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Not found')
+    if email_unique.is_used == 1:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail='Gone')
+    user = db.query(Users).filter(Users.id == email_unique.user_id).first()
+    user.is_valid = True
+    email_unique.is_used = True
+    event_log = EventLogger(event_type=15,
+                            user_id=user.id,
+                            event_body=f"Email confirmed. Account: {user.email}, "
+                                       f"user_id: {user.id}"
+                            )
+    db.add(event_log)
+    db.commit()
+    db.close()
+    return {"message": "Email confirmed"}
+
+
+@router.put("/update_password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(user: user_dependency, db: db_dependency, user_verification: UpdateUserPassword):
+    if user is None:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+    user_model = db.query(Users).filter(Users.id == user.get('id')).first()
+
+    if not bcrypt_context.verify(user_verification.password, user_model.hashed_password):
+        raise HTTPException(status_code=400, detail='Current password is wrong')
+
+    if user_verification.password == user_verification.new_password:
+        raise HTTPException(status_code=400, detail='New password must be different from the current password')
+
+    user_model.hashed_password = bcrypt_context.hash(user_verification.new_password)
+    event_log = EventLogger(event_type=6,
+                            user_id=user.get('id'),
+                            details=f"Password changed for username: {user.get('username')}"
+                            )
+    db.add(user_model)
+    db.add(event_log)
+    db.commit()
