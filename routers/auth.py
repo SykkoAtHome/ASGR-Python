@@ -1,6 +1,5 @@
 from typing import Annotated
 from datetime import timedelta
-
 import requests
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -17,11 +16,12 @@ from datetime import datetime
 import random
 import string
 
+from starlette.responses import HTMLResponse
 from urllib3.exceptions import MaxRetryError
-
 from database import SessionLocal
 from models import Users, EventLogger, UserNotifications, EmailConfirm
 from sendmail import send_email_verification
+from html_response import email_confirmed
 
 router = APIRouter(prefix='/account', tags=['Authentication'])
 
@@ -130,6 +130,7 @@ def email_activation(db: db_dependency, user_id, date_time):
     db.add(query)
     db.commit()
 
+
 # def send_email():
 
 
@@ -227,7 +228,7 @@ async def confirm_user_email(db: db_dependency, unique):
     db.add(event_log)
     db.commit()
     db.close()
-    return {"message": "Email confirmed"}
+    return HTMLResponse(content=email_confirmed())
 
 
 @router.put("/update_password", status_code=status.HTTP_204_NO_CONTENT)

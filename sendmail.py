@@ -20,6 +20,7 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 login = "11d6f8dbafbd24"
 password = "38c92d7a8189f9"
+api_url = "http://127.0.0.1:8000"
 
 
 def send_email_verification(user_id, db: db_dependency):
@@ -39,7 +40,7 @@ def send_email_verification(user_id, db: db_dependency):
     text = f"Hi,\n" \
            f"This message was automatically generated during the account creation process in the ASGR application.\n" \
            f"To confirm your email address, please click the link below.\n\n" \
-           f"http://127.0.0.1:8000/account/confirm_email/{confirm.unique}\n\n" \
+           f"{api_url}/account/confirm_email/{confirm.unique}\n\n" \
            f"Link is active for 24 hours."
 
     html = f"""\
@@ -48,7 +49,7 @@ def send_email_verification(user_id, db: db_dependency):
         <p>Hi,<br>
            This message was automatically generated during the account creation process in the ASGR application.<br>
            To confirm your email address, please click the link below.</p>
-        <p><a href="http://127.0.0.1:8000/account/confirm_email/{confirm.unique}">Confirm e-mail</a></p>
+        <p><a href="{api_url}/account/confirm_email/{confirm.unique}">Confirm e-mail</a></p>
         <p> Link is active for 24 hours.</p>
       </body>
     </html>
