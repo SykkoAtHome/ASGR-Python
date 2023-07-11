@@ -5,7 +5,7 @@ from sqlalchemy import Integer, ForeignKey
 
 from database import Base
 
-
+#  Users
 class Users(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
@@ -73,3 +73,6 @@ class Categories(Base):
     __tablename__ = 'categories'
     id = Column(Integer, primary_key=True, index=True)
     category_name = Column(String)
+
+
+#  Game
