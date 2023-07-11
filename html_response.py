@@ -1,9 +1,9 @@
-from starlette.responses import HTMLResponse
-from database import SessionLocal
 from typing import Annotated
-from sqlalchemy.orm import Session
+
 from fastapi import Depends
-from models import Users
+from sqlalchemy.orm import Session
+
+from database import SessionLocal
 
 
 def get_db():
