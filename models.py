@@ -20,7 +20,7 @@ class Users(Base):
 
 class Usertype(Base):
     __tablename__ = "user_type"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_type_name = Column(String)
 
 
@@ -78,6 +78,7 @@ class Categories(Base):
 
 
 #  Game
+
 
 class GameStatus(Base):
     __tablename__ = 'game_status'
@@ -161,6 +162,7 @@ class ShapeTypes(Base):
     id = Column(Integer, primary_key=True, index=True)
     type = Column(String, unique=True)
 
+
 class MapLayer0(Base):
     __tablename__ = 'map_layer_0'
     id = Column(Integer, primary_key=True, index=True)
@@ -172,6 +174,7 @@ class MapLayer0(Base):
     expires = Column(Integer)
     color = Column(String)
     kill_timer = Column(Integer)
+
 
 class MapLayer1(Base):
     __tablename__ = 'map_layer_1'
@@ -198,6 +201,7 @@ class MapLayer2(Base):
     time_delay = Column(Integer, default=5)
     release_players = Column(Integer, default=1)
 
+
 class MapLayer3(Base):
     __tablename__ = 'map_layer_3'
     id = Column(Integer, primary_key=True, index=True)
@@ -209,6 +213,7 @@ class MapLayer3(Base):
     color = Column(String)
     map_object_type = Column(String, ForeignKey("object_types.type"))
     object_icon = Column(Integer, ForeignKey("icons.id"))
+
 
 class MapUsers(Base):
     __tablename__ = 'map_users'
@@ -233,4 +238,3 @@ class InGameLocationEvents(Base):
     longitude = Column(String)
     timestamp = Column(TIMESTAMP)
     tick_id = Column(Integer)
-

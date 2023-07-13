@@ -131,9 +131,6 @@ def email_activation(db: db_dependency, user_id, date_time):
     db.commit()
 
 
-# def send_email():
-
-
 def get_user_ip():
     response = requests.get('https://api.ipify.org?format=json').json()
     return response["ip"]

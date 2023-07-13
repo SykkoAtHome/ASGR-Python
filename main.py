@@ -15,7 +15,7 @@ app.include_router(game.router)
 scheduler = BackgroundScheduler()
 
 
-# scheduler.add_job(my_task, 'interval', seconds=10)
+scheduler.add_job(my_task, 'interval', seconds=10)
 
 
 @app.on_event("startup")
