@@ -238,3 +238,20 @@ class InGameLocationEvents(Base):
     longitude = Column(String)
     timestamp = Column(TIMESTAMP)
     tick_id = Column(Integer)
+
+
+#  APP
+class AppEventsLogger(Base):
+    __tablename__ = 'app_events'
+    id = Column(Integer, primary_key=True, index=True)
+    service_name = Column(String)
+    event_body = Column(String)
+    event_date = Column(TIMESTAMP)
+
+
+class AppServicesSettings(Base):
+    __tablename__ = 'app_services_settings'
+    id = Column(Integer, primary_key=True, index=True)
+    service_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    service_interval = Column(Integer, default=10)
