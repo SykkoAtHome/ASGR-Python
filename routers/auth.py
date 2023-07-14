@@ -131,9 +131,6 @@ def email_activation(db: db_dependency, user_id, date_time):
     db.commit()
 
 
-# def send_email():
-
-
 def get_user_ip():
     response = requests.get('https://api.ipify.org?format=json').json()
     return response["ip"]
@@ -150,8 +147,7 @@ def register_user(db: db_dependency, create_user_request: CreateUserRequest):
         date_time = datetime.now()
         create_user_model = Users(email=create_user_request.email,
                                   hashed_password=bcrypt_context.hash(create_user_request.password),
-                                  create_date=date_time
-                                  )
+                                  create_date=date_time)
         db.add(create_user_model)
         db.flush()
         new_user_id = create_user_model.id
