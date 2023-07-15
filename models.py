@@ -49,7 +49,6 @@ class UserNotifications(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     is_visible = Column(Boolean, default=True)
     is_new = Column(Boolean, default=True)
-    category = Column(Integer, ForeignKey("categories.id"))
     notification_body = Column(String)
     notification_date = Column(TIMESTAMP)
 
@@ -68,14 +67,6 @@ class Events(Base):
     __tablename__ = 'events'
     id = Column(Integer, primary_key=True, index=True)
     event_name = Column(String)
-    category = Column(Integer, ForeignKey("categories.id"))
-
-
-class Categories(Base):
-    __tablename__ = 'categories'
-    id = Column(Integer, primary_key=True, index=True)
-    category_name = Column(String)
-
 
 #  Game
 

@@ -137,7 +137,7 @@ def get_user_ip():
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register_user(db: db_dependency, create_user_request: CreateUserRequest):
+async def register_user(db: db_dependency, create_user_request: CreateUserRequest):
     try:
         existing_email = db.query(Users).filter(Users.email == create_user_request.email).first()
 
@@ -164,7 +164,6 @@ def register_user(db: db_dependency, create_user_request: CreateUserRequest):
         notification_log = UserNotifications(user_id=new_user_id,
                                              is_visible=True,
                                              is_new=True,
-                                             category=1,
                                              notification_body=f"Congratulations! Your account has been created.",
                                              notification_date=date_time
                                              )
@@ -216,7 +215,7 @@ async def confirm_user_email(db: db_dependency, unique):
     user = db.query(Users).filter(Users.id == email_unique.user_id).first()
     user.is_valid = True
     email_unique.is_used = True
-    event_log = EventLogger(event_type=15,
+    event_log = EventLogger(event_type=9,
                             user_id=user.id,
                             event_body=f"Email confirmed. Account: {user.email}, "
                                        f"user_id: {user.id}"

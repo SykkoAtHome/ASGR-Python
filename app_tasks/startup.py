@@ -1,12 +1,9 @@
 from datetime import datetime
 
-from apscheduler.schedulers.background import BackgroundScheduler
-
 from database import SessionLocal
 from models import AppEventsLogger, AppServicesSettings
 
 db = SessionLocal()
-scheduler = BackgroundScheduler()
 
 
 def main_app_log(service: str, event: str):
@@ -26,4 +23,3 @@ def process_services():
         return None
     service_dict = {service.service_name: service.service_interval for service in services}
     return service_dict
-
